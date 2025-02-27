@@ -1,0 +1,39 @@
+body {
+  font-family: "Montserrat", sans-serif;
+  padding: 20px;
+}
+
+h1 {
+  color: #ff00c3;
+}
+
+button {
+  background-color: #ff00c3 !important;
+  color: white !important;
+  cursor: pointer;
+  border: none !important;
+}
+button:hover {
+  background-color: #ffc400 !important;
+}
+
+.row {
+  margin: 20px;
+}
+
+.card {
+  width: max-content;
+  margin: 20px;
+}
+.card .card-title {
+  font-weight: bold;
+}
+.card .card-text p {
+  margin: 0;
+}
+
+/*# sourceMappingURL=styles.css.map */
+
+form{
+  padding: 20px;
+}

@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "name": "Компьютер",
+    "price": 1000,
+    "description": "Описание компьютера",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "Компьютеры",
+      "Техника"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Мышь",
+    "price": 500,
+    "description": "Описание мыши",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "Компьютеры"
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Клавиатура",
+    "price": 700,
+    "description": "Описание клавиатуры",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "Компьютеры"
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Монитор",
+    "price": 300,
+    "description": "Описание монитора",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "Компьютеры"
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Камера",
+    "price": 400,
+    "description": "Описание камеры",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "Компьютеры"
+    ]
+  },
+  {
+    "name": "wertyui",
+    "price": "12345",
+    "description": "wertyu",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "sdfghjk"
+    ]
+  }
+]

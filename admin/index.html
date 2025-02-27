@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Третье базовое задание</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="styles.css">
+    </head>
+    <body>
+        <h1>Базовое задание №3. Админ панель</h1>
+        <h2>Добавить товар</h2>
+        <form id="form">
+            <div class="form-group">
+                <input type="text" class="form-control" id="name" placeholder="Название">
+            </div>
+            <div class="form-group">
+                <input type="number" class="form-control" id="price" placeholder="Цена">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="description" placeholder="Описание">
+            </div>
+            <div class="form-group" id="category">
+                <button type="button" class="btn" id="categoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
+                <input type="text" class="form-control" id="cat" placeholder="Категория">
+            </div>
+            <button type="submit" class="btn btn-primary">Добавить</button>
+        </form>
+    </body>
+    <script>
+        document.getElementById('form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const categories = [];
+            const categoryInputs = document.querySelectorAll('#category input[type="text"]');
+            categoryInputs.forEach(input => {
+                if (input.value) {
+                    categories.push(input.value);
+                }
+            });
+            const productData = {
+                name: document.getElementById('name').value,
+                price: document.getElementById('price').value,
+                description: document.getElementById('description').value,
+                image: "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+                categories: categories
+            };
+
+            fetch('/api/admin/goods', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(productData)
+            })
+        });
+        document.getElementById('categoryBTN').addEventListener('click', function(e) {
+            e.preventDefault();
+            const newCategoryInput = document.createElement('input');
+            newCategoryInput.type = 'text';
+            newCategoryInput.className = 'form-control category-input';
+            newCategoryInput.placeholder = 'Категория';
+            newCategoryInput.style.marginTop = '10px';
+            document.getElementById('category').appendChild(newCategoryInput);
+        });
+        
+    </script>
+</html>

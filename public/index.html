@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Третье базовое задание</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/styles.css">
+    </head>
+    <body>
+        <h1>Базовое задание №3</h1>
+        <div class="container">
+            <div class="row" id="products"></div>
+        </div>
+        <script>
+            fetch('http://localhost:5500/api/goods')
+            .then(response => response.json())
+            .then(data => {
+                const productsContainer = document.getElementById('products');
+                data.forEach(product => {
+                    const card = document.createElement('div');
+                    card.className = 'col-md-4';
+                    card.innerHTML = `
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">${product.name}</h5>
+                                <p class="card-text">
+                                    <img src="${product.image}" alt="Картинка" style="width: 200px">
+                                    <div class="card-text">
+                                        <p>Цена: ${product.price} руб.</p>
+                                        <p>${product.description}</p>
+                                    </div>
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                    productsContainer.appendChild(card);
+                });
+            });
+        </script>
+    </body>
+</html>
