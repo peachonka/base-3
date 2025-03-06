@@ -9,6 +9,7 @@ const ProductType = new GraphQLObjectType({
     name: { type: GraphQLString },
     price: { type: GraphQLInt },
     description: { type: GraphQLString },
+    image: { type: GraphQLString },
     categories: { type: new GraphQLList(GraphQLString) },
   },
 });
@@ -19,20 +20,8 @@ const RootQuery = new GraphQLObjectType({
   fields: {
     products: {
       type: new GraphQLList(ProductType),
-      args: {
-        fields: { type: GraphQLString }, // Поля, которые нужно вернуть
-      },
-      resolve(parent, args) {
-        const fields = args.fields ? args.fields.split(',') : ['name', 'price']; // По умолчанию возвращаем название и цену
-        return Goods.map(product => {
-          const filteredProduct = {};
-          fields.forEach(field => {
-            if (product[field] !== undefined) {
-              filteredProduct[field] = product[field];
-            }
-          });
-          return filteredProduct;
-        });
+      resolve() {
+        return Goods; // Возвращаем все товары
       },
     },
   },

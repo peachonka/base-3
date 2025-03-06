@@ -9,34 +9,78 @@
     </head>
     <body>
         <h1>Базовое задание №4</h1>
-        <div class="d-flex">
-            <div class="container">
+        <div class="d-flex flex-column flex-md-row">
+            <div class="flex-grow-1 mr-md-3 mb-3 mb-md-0">
+                <div class="d-flex mb-3">
+                    <button onclick="showAllData()" class="btn btn-primary mr-3">Показать все данные</button>
+                    <button onclick="showNamesAndPrices()" class="btn btn-primary mr-3">Названия и цены</button>
+                    <button onclick="showNamesAndDescriptions()" class="btn btn-primary mr-3">Названия и описания</button>
+                </div>
                 <div class="row" id="products"></div>
             </div>
-            <div id="chat" style="margin-top: 20px;">
+            <div id="chat" class="flex-grow-1" style="margin-top: 20px;">
                 <h2>Чат поддержки</h2>
                 <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
                 <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px;">
                 <button onclick="sendMessage()" style="width:100%; padding: 5px 10px; margin-top: 10px; border: none; border-radius:5px;">Отправить</button>
             </div>
         </div>
+
         <script>
-            fetch('http://localhost:5500/api/goods')
-            .then(response => response.json())
-            .then(data => {
+            // Функция для отправки GraphQL-запросов
+            async function fetchGraphQL(query, variables = {}) {
+                const response = await fetch('/graphql', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query,
+                        variables,
+                    }),
+                });
+                return response.json();
+            }
+
+            // Загрузка товаров через GraphQL
+            async function loadProducts() {
+            const query = `
+                query {
+                products {
+                    id
+                    name
+                    price
+                    description
+                    image
+                    categories
+                }
+                }
+            `;
+
+            const result = await fetchGraphQL(query);
+            console.log('GraphQL Response:', result);
+            const products = result.data.products;
+            renderProducts(products);
+            }
+
+            // Отображение товаров
+            function renderProducts(products) {
                 const productsContainer = document.getElementById('products');
-                data.forEach(product => {
+                productsContainer.innerHTML = ''; // Очищаем контейнер
+
+                products.forEach(product => {
                     const card = document.createElement('div');
-                    card.className = 'col-md-4';
+                    card.className = 'col-md-4 mb-3';
                     card.innerHTML = `
-                        <div class="card">
+                    <div class="card">
                             <div class="card-body">
                                 <h5 class="card-title">${product.name}</h5>
                                 <p class="card-text">
                                     <img src="${product.image}" alt="Картинка" style="width: 200px">
                                     <div class="card-text">
-                                        <p>Цена: ${product.price} руб.</p>
-                                        <p>${product.description}</p>
+                                        ${product.price ? `<p><strong>Цена:</strong> ${product.price} руб.</p>` : ''}
+                                        ${product.description ? `<p><strong>Описание:</strong> ${product.description}</p>` : ''}
+                                        ${product.categories && product.categories.length > 0 ? `<p><strong>Категории:</strong> ${product.categories.join(', ')}</p>` : ''}
                                     </div>
                                 </p>
                             </div>
@@ -44,29 +88,48 @@
                     `;
                     productsContainer.appendChild(card);
                 });
-            });
+                }
+
+            // Показать все данные
+            function showAllData() {
+                loadProducts('name price description image categories');
+            }
+
+            // Показать только названия и цены
+            function showNamesAndPrices() {
+                loadProducts('name price');
+            }
+
+            // Показать только названия и описания
+            function showNamesAndDescriptions() {
+                loadProducts('name description');
+            }
+
+            // Загружаем все данные по умолчанию
+            loadProducts();
+
             // Подключение к WebSocket-серверу
-            const ws = new WebSocket('ws://localhost:8081'); // Убедитесь, что порт совпадает с вашим WebSocket-сервером
+            const ws = new WebSocket('ws://localhost:8081');
 
             // Обработка входящих сообщений
             ws.onmessage = (event) => {
                 // Если данные приходят как Blob, преобразуем их в текст
-    if (event.data instanceof Blob) {
-        const reader = new FileReader();
-        reader.onload = () => {
-            const message = JSON.parse(reader.result); // Парсим JSON
-            const messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
-        };
-        reader.readAsText(event.data); // Читаем Blob как текст
-    } else {
-        // Если данные приходят как текст
-        const message = JSON.parse(event.data); // Парсим JSON
-        const messagesDiv = document.getElementById('messages');
-        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
-        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
-    }
+                if (event.data instanceof Blob) {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const message = JSON.parse(reader.result); // Парсим JSON
+                        const messagesDiv = document.getElementById('messages');
+                        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+                    };
+                    reader.readAsText(event.data); // Читаем Blob как текст
+                } else {
+                    // Если данные приходят как текст
+                    const message = JSON.parse(event.data); // Парсим JSON
+                    const messagesDiv = document.getElementById('messages');
+                    messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+                }
             };
 
             // Отправка сообщения
