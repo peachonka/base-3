@@ -1,10 +1,17 @@
 const express = require('express');
+const { graphqlHTTP } = require('express-graphql');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const schema = require('./schema');
 
 const app = express();
 const PORT = 5500;
+
+app.use('/graphql', graphqlHTTP({
+    schema,
+    graphiql: true, // Включите GraphiQL для тестирования
+  }));
 
 app.use(cors());
 app.use(express.static('public'));

@@ -8,45 +8,55 @@
         <link rel="stylesheet" href="styles.css">
     </head>
     <body>
-        <h1>Базовое задание №3. Админ панель</h1>
-        <h2>Добавить товар</h2>
-        <form id="form">
-            <div class="form-group">
-                <input type="text" class="form-control" id="name" placeholder="Название">
-            </div>
-            <div class="form-group">
-                <input type="number" class="form-control" id="price" placeholder="Цена">
-            </div>
-            <div class="form-group">
-                <input type="text" class="form-control" id="description" placeholder="Описание">
-            </div>
-            <div class="form-group" id="category">
-                <button type="button" class="btn" id="categoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
-                <input type="text" class="form-control" id="cat" placeholder="Категория">
-            </div>
-            <button type="submit" class="btn btn-primary">Добавить</button>
-        </form>
+        <h1>Базовое задание №4. Админ панель</h1>
+        <div class="d-flex"> 
+            <div class="container">
+                <h2>Добавить товар</h2>
+                <form id="form">
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="name" placeholder="Название">
+                    </div>
+                    <div class="form-group">
+                        <input type="number" class="form-control" id="price" placeholder="Цена">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="description" placeholder="Описание">
+                    </div>
+                    <div class="form-group" id="category">
+                        <button type="button" class="btn" id="categoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
+                        <input type="text" class="form-control" id="cat" placeholder="Категория">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </form>
 
-        <h2 class="mt-4">Редактировать товар</h2>
-        <form id="editProductForm">
-            <div class="form-group">
-                <input type="number" id="editProductId" class="form-control" placeholder="ID">
+                <h2 class="mt-4">Редактировать товар</h2>
+                <form id="editProductForm">
+                    <div class="form-group">
+                        <input type="number" id="editProductId" class="form-control" placeholder="ID">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="editName" placeholder="Название">
+                    </div>
+                    <div class="form-group">
+                        <input type="number" class="form-control" id="editPrice" placeholder="Цена">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="editDescription" placeholder="Описание">
+                    </div>
+                    <div class="form-group" id="editCategory">
+                        <button type="button" class="btn" id="editCategoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
+                        <input type="text" class="form-control" id="cat" placeholder="Категория">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </form>
             </div>
-            <div class="form-group">
-                <input type="text" class="form-control" id="editName" placeholder="Название">
+            <div id="chat" style="margin-top: 20px;">
+                <h2>Чат поддержки</h2>
+                <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
+                <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px;">
+                <button onclick="sendMessage()" class="btn btn-primary" style="width:100%; padding: 5px 10px; margin-top: 10px; border: none; border-radius:5px;">Отправить</button>
             </div>
-            <div class="form-group">
-                <input type="number" class="form-control" id="editPrice" placeholder="Цена">
-            </div>
-            <div class="form-group">
-                <input type="text" class="form-control" id="editDescription" placeholder="Описание">
-            </div>
-            <div class="form-group" id="editCategory">
-                <button type="button" class="btn" id="editCategoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
-                <input type="text" class="form-control" id="cat" placeholder="Категория">
-            </div>
-            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-        </form>
+        </div>
     </body>
     <script>
         document.getElementById('form').addEventListener('submit', function(e) {
@@ -141,5 +151,54 @@
                 window.location.reload(); // Перезагружаем страницу
             });
         });
+
+        // Подключение к WebSocket-серверу
+const ws = new WebSocket('ws://localhost:8081'); // Убедитесь, что порт совпадает с вашим WebSocket-сервером
+
+// Обработка входящих сообщений
+ws.onmessage = (event) => {
+    const messagesDiv = document.getElementById('messages');
+
+    // Если данные приходят как Blob, преобразуем их в текст
+    if (event.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const message = JSON.parse(reader.result); // Парсим JSON
+            messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+        };
+        reader.readAsText(event.data); // Читаем Blob как текст
+    } else {
+        // Если данные приходят как текст
+        const message = JSON.parse(event.data); // Парсим JSON
+        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+    }
+};
+
+// Отправка сообщения
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+
+    if (message) {
+        const messageData = {
+            sender: 'Администратор', // Или другое имя пользователя
+            text: message,
+        };
+        ws.send(JSON.stringify(messageData)); // Отправляем сообщение на сервер
+        input.value = ''; // Очищаем поле ввода
+    }
+}
+
+// Обработка закрытия соединения
+ws.onclose = () => {
+    alert('Соединение с чатом закрыто. Пожалуйста, перезагрузите страницу.');
+};
+
+// Обработка ошибок
+ws.onerror = (error) => {
+    console.error('Ошибка WebSocket:', error);
+};
     </script>
 </html>

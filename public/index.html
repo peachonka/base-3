@@ -8,9 +8,17 @@
         <link rel="stylesheet" href="/styles.css">
     </head>
     <body>
-        <h1>Базовое задание №3</h1>
-        <div class="container">
-            <div class="row" id="products"></div>
+        <h1>Базовое задание №4</h1>
+        <div class="d-flex">
+            <div class="container">
+                <div class="row" id="products"></div>
+            </div>
+            <div id="chat" style="margin-top: 20px;">
+                <h2>Чат поддержки</h2>
+                <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
+                <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px;">
+                <button onclick="sendMessage()" style="width:100%; padding: 5px 10px; margin-top: 10px; border: none; border-radius:5px;">Отправить</button>
+            </div>
         </div>
         <script>
             fetch('http://localhost:5500/api/goods')
@@ -37,6 +45,54 @@
                     productsContainer.appendChild(card);
                 });
             });
+            // Подключение к WebSocket-серверу
+            const ws = new WebSocket('ws://localhost:8081'); // Убедитесь, что порт совпадает с вашим WebSocket-сервером
+
+            // Обработка входящих сообщений
+            ws.onmessage = (event) => {
+                // Если данные приходят как Blob, преобразуем их в текст
+    if (event.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = () => {
+            const message = JSON.parse(reader.result); // Парсим JSON
+            const messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+        };
+        reader.readAsText(event.data); // Читаем Blob как текст
+    } else {
+        // Если данные приходят как текст
+        const message = JSON.parse(event.data); // Парсим JSON
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
+    }
+            };
+
+            // Отправка сообщения
+            function sendMessage() {
+                const input = document.getElementById('messageInput');
+                const message = input.value.trim();
+
+                if (message) {
+                    const messageData = {
+                        sender: 'Покупатель', // Или другое имя пользователя
+                        text: message,
+                    };
+                    ws.send(JSON.stringify(messageData)); // Отправляем сообщение на сервер
+                    input.value = ''; // Очищаем поле ввода
+                }
+            }
+
+            // Обработка закрытия соединения
+            ws.onclose = () => {
+                alert('Соединение с чатом закрыто. Пожалуйста, перезагрузите страницу.');
+            };
+
+            // Обработка ошибок
+            ws.onerror = (error) => {
+                console.error('Ошибка WebSocket:', error);
+            };
         </script>
     </body>
 </html>
