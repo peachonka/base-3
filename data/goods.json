@@ -58,5 +58,23 @@
     "categories": [
       "sdfghjk"
     ]
+  },
+  {
+    "name": "wertyui",
+    "price": "12345",
+    "description": "wertyu",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "sdfghjk"
+    ]
+  },
+  {
+    "name": "цукенгш",
+    "price": "12345",
+    "description": "wertyu",
+    "image": "https://img.freepik.com/free-vector/3d-delivery-box-parcel_78370-825.jpg?t=st=1740653046~exp=1740656646~hmac=5cf5232b4f329ec05cb8b382105968556786a93785478fda8646f30f3fc30d41&w=900",
+    "categories": [
+      "sdfghjk"
+    ]
   }
 ]

@@ -41,6 +41,67 @@ app.post('/api/admin/goods', (req, res) => {
     });
 });
 
+// Редактирование товара
+app.put('/api/admin/goods/:id', (req, res) => {
+    const productId = parseInt(req.params.id); // Получаем ID товара из URL
+    fs.readFile(goodsFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send('Ошибка чтения файла');
+        }
+        let goods = JSON.parse(data);
+        const productIndex = goods.findIndex(product => product.id === productId); // Ищем товар по ID
+
+        if (productIndex === -1) {
+            return res.status(404).json({ message: 'Товар не найден' });
+        }
+
+        // Обновляем данные товара
+        goods[productIndex] = {
+            ...goods[productIndex],
+            name: req.body.name || goods[productIndex].name,
+            price: req.body.price || goods[productIndex].price,
+            description: req.body.description || goods[productIndex].description,
+            image: req.body.image || goods[productIndex].image,
+            categories: req.body.categories || goods[productIndex].categories,
+        };
+
+        // Сохраняем обновленные данные в файл
+        fs.writeFile(goodsFilePath, JSON.stringify(goods, null, 2), (err) => {
+            if (err) {
+                return res.status(500).send('Ошибка записи файла');
+            }
+            res.json({ message: 'Товар обновлен', product: goods[productIndex] });
+        });
+    });
+});
+
+// Удаление товара
+app.delete('/api/admin/goods/:id', (req, res) => {
+    const productId = parseInt(req.params.id); // Получаем ID товара из URL
+    fs.readFile(goodsFilePath, 'utf8', (err, data) => {
+        if (err) {
+            return res.status(500).send('Ошибка чтения файла');
+        }
+        let goods = JSON.parse(data);
+        const productIndex = goods.findIndex(product => product.id === productId); // Ищем товар по ID
+
+        if (productIndex === -1) {
+            return res.status(404).json({ message: 'Товар не найден' });
+        }
+
+        // Удаляем товар из массива
+        const deletedProduct = goods.splice(productIndex, 1);
+
+        // Сохраняем обновленные данные в файл
+        fs.writeFile(goodsFilePath, JSON.stringify(goods, null, 2), (err) => {
+            if (err) {
+                return res.status(500).send('Ошибка записи файла');
+            }
+            res.json({ message: 'Товар удален', product: deletedProduct });
+        });
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Админ-сервер запущен на http://localhost:${PORT}`);
 });

@@ -26,6 +26,27 @@
             </div>
             <button type="submit" class="btn btn-primary">Добавить</button>
         </form>
+
+        <h2 class="mt-4">Редактировать товар</h2>
+        <form id="editProductForm">
+            <div class="form-group">
+                <input type="number" id="editProductId" class="form-control" placeholder="ID">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="editName" placeholder="Название">
+            </div>
+            <div class="form-group">
+                <input type="number" class="form-control" id="editPrice" placeholder="Цена">
+            </div>
+            <div class="form-group">
+                <input type="text" class="form-control" id="editDescription" placeholder="Описание">
+            </div>
+            <div class="form-group" id="editCategory">
+                <button type="button" class="btn" id="editCategoryBTN" style="min-width: max-content; margin-bottom: 10px;">Добавить категорию</button>
+                <input type="text" class="form-control" id="cat" placeholder="Категория">
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+        </form>
     </body>
     <script>
         document.getElementById('form').addEventListener('submit', function(e) {
@@ -62,6 +83,63 @@
             newCategoryInput.style.marginTop = '10px';
             document.getElementById('category').appendChild(newCategoryInput);
         });
+
+        document.getElementById('editCategoryBTN').addEventListener('click', function(e) {
+            e.preventDefault();
+            const newCategoryInput = document.createElement('input');
+            newCategoryInput.type = 'text';
+            newCategoryInput.className = 'form-control category-input';
+            newCategoryInput.placeholder = 'Категория';
+            newCategoryInput.style.marginTop = '10px';
+            document.getElementById('editCategory').appendChild(newCategoryInput);
+        });
         
+        function editProduct(productId) {
+            fetch(`/api/admin/goods/${productId}`)
+                .then(response => response.json())
+                .then(product => {
+                    document.getElementById('editProductId').value = product.id;
+                    document.getElementById('editName').value = product.name;
+                    document.getElementById('editPrice').value = product.price;
+                    document.getElementById('editDescription').value = product.description;
+                    document.getElementById('editCat').value = product.categories.join(', ');
+                    document.getElementById('editProductForm').style.display = 'block';
+                });
+        }
+
+        // Функция для удаления товара
+        function deleteProduct(productId) {
+            if (confirm('Вы уверены, что хотите удалить этот товар?')) {
+                fetch(`/api/admin/goods/${productId}`, { method: 'DELETE' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                        window.location.reload(); // Перезагружаем страницу
+                    });
+            }
+        }
+
+        // Обработка формы редактирования
+        document.getElementById('editProductForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const productId = document.getElementById('editProductId').value;
+            const productData = {
+                name: document.getElementById('editName').value,
+                price: document.getElementById('editPrice').value,
+                description: document.getElementById('editDescription').value,
+                categories: document.getElementById('editCat').value.split(',').map(cat => cat.trim()),
+            };
+
+            fetch(`/api/admin/goods/${productId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(productData),
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                window.location.reload(); // Перезагружаем страницу
+            });
+        });
     </script>
 </html>
