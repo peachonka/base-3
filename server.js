@@ -1,27 +1,41 @@
+require('dotenv').config();
 const express = require('express');
-const { graphqlHTTP } = require('express-graphql');
-const fs = require('fs');
-const path = require('path');
-const cors = require('cors');
-const schema = require('./schema');
+const jwt = require('jsonwebtoken');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
-const PORT = 5500;
 
-app.use('/graphql', graphqlHTTP({
-    schema,
-    graphiql: true, // Включите GraphiQL для тестирования
-  }));
+// Middleware
+app.use(express.json());
 
-app.use(cors());
-app.use(express.static('public'));
+// Пример защищенного роута
+app.get('/api/protected', authenticateToken, (req, res) => {
+  res.json({ message: 'Доступ разрешен', user: req.user });
+});
 
-app.get('/api/goods', (req, res) => {
-    fs.readFile(path.join(__dirname, 'data', 'goods.json'), 'utf8', (err, data) => {
-        res.json(JSON.parse(data));
+// Пример роута с Stripe
+app.post('/api/create-payment-intent', authenticateToken, async (req, res) => {
+  try {
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: req.body.amount * 100, // amount in cents
+      currency: 'usd',
     });
+    res.json({ clientSecret: paymentIntent.client_secret });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-app.listen(PORT, () => {
-    console.log(`Сервер запущен на http://localhost:${PORT}`);
-});
+// Middleware аутентификации
+function authenticateToken(req, res, next) {
+  const token = req.headers['authorization'];
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+}
+
+app.listen(8080, () => console.log('Server running on port 8080'));

@@ -1,156 +1,518 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Третье базовое задание</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-        <link rel="stylesheet" href="/styles.css">
-    </head>
-    <body>
-        <h1>Базовое задание №4</h1>
-        <div class="d-flex flex-column flex-md-row">
-            <div class="flex-grow-1 mr-md-3 mb-3 mb-md-0">
-                <div class="d-flex mb-3">
-                    <button onclick="showAllData()" class="btn btn-primary mr-3">Показать все данные</button>
-                    <button onclick="showNamesAndPrices()" class="btn btn-primary mr-3">Названия и цены</button>
-                    <button onclick="showNamesAndDescriptions()" class="btn btn-primary mr-3">Названия и описания</button>
-                </div>
-                <div class="row" id="products"></div>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интернет-магазин</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="icon" href="icon.png">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="#">Магазин</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item"><a class="nav-link" href="#" onclick="loadProducts()">Товары</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showCart()">Корзина</a></li>
+                <li class="nav-item"><a class="nav-link" href="#" onclick="showOrders()">Мои заказы</a></li>
+            </ul>
+            <div id="auth-buttons">
+                <button class="btn btn-outline-primary" onclick="showLoginForm()">Войти</button>
+                <button class="btn btn-primary" onclick="showRegisterForm()">Регистрация</button>
             </div>
-            <div id="chat" class="flex-grow-1" style="margin-top: 20px; min-width: 350px;">
-                <h2>Чат поддержки</h2>
-                <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
-                <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px;">
-                <button onclick="sendMessage()" style="width:100%; padding: 5px 10px; margin-top: 10px; border: none; border-radius:5px;">Отправить</button>
+            <div id="user-info" style="display: none;">
+                <span id="username" class="mr-2"></span>
+                <button class="btn btn-outline-danger" onclick="logout()">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Формы авторизации/регистрации -->
+        <div id="auth-forms" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">            <div class="card mb-4" style="width: 400px;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 id="auth-form-title" class="card-title mb-0"></h5>
+                    <button type="button" style="background-color: rgba(255, 255, 255, 0) !important;" class="close" onclick="hideAuthForms()">
+                        <img src="./img/close.svg" alt="Закрыть" style="width: 20px;">
+                    </button>
+                </div>
+                <div class="card-body">
+                    <form id="login-form" onsubmit="login(event)">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="login-email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Пароль</label>
+                            <input type="password" id="login-password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Войти</button>
+                    </form>
+                    <form id="register-form" onsubmit="register(event)" style="display: none;">
+                        <div class="form-group">
+                            <label>Имя</label>
+                            <input type="text" id="register-name" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="register-email" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Пароль</label>
+                            <input type="password" id="register-password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
+                    </form>
+                </div>
             </div>
         </div>
 
-        <script>
-            // Функция для отправки GraphQL-запросов
-            async function fetchGraphQL(query, variables = {}) {
-                const response = await fetch('/graphql', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        query,
-                        variables,
-                    }),
+        <!-- Основной контент -->
+        <div id="main-content">
+            <div class="row d-flex flex-column flex-md-row" id="products-container"></div>
+            
+            <!-- Корзина -->
+            <div id="cart-container" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Корзина</h2>
+                    <button class="btn btn-outline-secondary" onclick="showSection('products-container')">Назад к товарам</button>
+                </div>
+                <div id="cart-items"></div>
+                <div class="mt-3">
+                    <h4>Итого: <span id="cart-total">0</span> руб.</h4>
+                    <button class="btn btn-success" onclick="checkout()">Оформить заказ</button>
+                </div>
+            </div>
+            
+            <!-- Форма оформления заказа -->
+            <div id="checkout-form" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Оформление заказа</h2>
+                    <button class="btn btn-outline-secondary" onclick="showSection('cart-container')">Назад к корзине</button>
+                </div>
+                <form onsubmit="placeOrder(event)">
+                    <div class="form-group">
+                        <label>Адрес доставки</label>
+                        <input type="text" id="shipping-address" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Номер карты</label>
+                        <input type="text" id="card-number" class="form-control" placeholder="4242 4242 4242 4242" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4 form-group">
+                            <label>Срок действия</label>
+                            <input type="text" id="card-expiry" class="form-control" placeholder="MM/YY" required>
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>CVC</label>
+                            <input type="text" id="card-cvc" class="form-control" placeholder="CVC" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Оплатить</button>
+                </form>
+            </div>
+            
+            <!-- Мои заказы -->
+            <div id="orders-container" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Мои заказы</h2>
+                    <button class="btn btn-outline-secondary" onclick="showSection('products-container')">Назад к товарам</button>
+                </div>
+                <div id="orders-list"></div>
+            </div>
+        </div>
+    </div>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script>
+        let currentUser = null;
+        let products = [];
+        let cart = [];
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadProducts();
+        });
+
+        // Проверка авторизации
+        function checkAuth() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetch('/api/auth/user', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                })
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка авторизации');
+                    return response.json();
+                })
+                .then(user => {
+                    currentUser = user;
+                    updateAuthUI();
+                    loadCart();
+                })
+                .catch(() => {
+                    localStorage.removeItem('token');
+                    updateAuthUI();
                 });
-                return response.json();
             }
+        }
 
-            // Загрузка товаров через GraphQL
-            async function loadProducts(fields = 'id name price description image categories') {
-            const query = `
-                query {
-                products{
-                    ${fields.split(' ').join('\n')}
-                }
-                }
-            `;
-
-            const result = await fetchGraphQL(query);
-            console.log('GraphQL Response:', result);
-            const products = result.data.products;
-            renderProducts(products);
+        function updateAuthUI() {
+            if (currentUser) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('username').textContent = currentUser.name;
+            } else {
+                document.getElementById('auth-buttons').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
             }
+        }
 
-            // Отображение товаров
-            function renderProducts(products) {
-                const productsContainer = document.getElementById('products');
-                productsContainer.innerHTML = ''; // Очищаем контейнер
+     
+        const stripe = Stripe('pk_test_your_publishable_key_here');
+        
+        async function checkout() {
+            // 1. Создаем Payment Intent на сервере
+            const response = await fetch('/api/create-payment-intent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': localStorage.getItem('token')
+            },
+            body: JSON.stringify({ amount: 1000 }) // 10.00 USD
+            });
+            
+            const { clientSecret } = await response.json();
+            
+            // 2. Подтверждаем платеж
+            const result = await stripe.confirmCardPayment(clientSecret, {
+            payment_method: {
+                card: elements.getElement('card'),
+                billing_details: {
+                name: 'Customer Name',
+                },
+            }
+            });
+            
+            if (result.error) {
+            console.error(result.error.message);
+            } else if (result.paymentIntent.status === 'succeeded') {
+            alert('Платеж успешен!');
+            }
+        }
 
-                products.forEach(product => {
-                    const card = document.createElement('div');
-                    card.className = 'col-md-4 mb-3';
-                    card.innerHTML = `
+        // Загрузка товаров
+        function loadProducts() {
+            fetch('/api/goods')
+                .then(response => {
+                    if (!response.ok) throw new Error('Ошибка загрузки товаров');
+                    return response.json();
+                })
+                .then(data => {
+                    products = data;
+                    renderProducts();
+                    showSection('products-container');
+                })
+                .catch(error => {
+                    console.error('Ошибка:', error);
+                    alert('Не удалось загрузить товары');
+                });
+        }
+
+        // Отображение товаров
+        function renderProducts() {
+            const container = document.getElementById('products-container');
+            container.innerHTML = products.map(product => `
+                <div class="col-md-4 mb-4">
                     <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">${product.name}</h5>
+                            <img src="${product.image}" alt="${product.name}" class="img-fluid mb-3" style="max-height: 200px; object-fit: contain;">
+                            <div class="card-text">
+                                ${product.price ? `<p><strong>Цена:</strong> ${product.price} руб.</p>` : ''}
+                                ${product.description ? `<p><strong>Описание:</strong> ${product.description}</p>` : ''}
+                                ${product.categories && product.categories.length > 0 ? `<p><strong>Категории:</strong> ${product.categories.join(', ')}</p>` : ''}
+                            </div>
+                            <button class="btn btn-primary mt-2" onclick="addToCart(${product.id})">В корзину</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Управление корзиной
+        function addToCart(productId) {
+            if (!currentUser) return showLoginForm();
+            
+            fetch('/api/cart', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify({ productId, quantity: 1 })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка добавления в корзину');
+                return response.json();
+            })
+            .then(() => {
+                loadCart();
+                alert('Товар добавлен в корзину');
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось добавить товар в корзину');
+            });
+        }
+
+        function loadCart() {
+            if (!currentUser) return;
+            
+            fetch('/api/cart', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки корзины');
+                return response.json();
+            })
+            .then(data => {
+                cart = data;
+                renderCart();
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось загрузить корзину');
+            });
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            let total = 0;
+            
+            container.innerHTML = cart.map(item => {
+                const product = products.find(p => p.id === item.productId);
+                if (!product) return '';
+                
+                total += product.price * item.quantity;
+                return `
+                    <div class="card mb-2">
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">${product.name}</h5>
+                                <p class="mb-0">${product.price} руб. × ${item.quantity} = ${product.price * item.quantity} руб.</p>
+                            </div>
+                            <button class="btn btn-danger btn-sm" onclick="removeFromCart(${product.id})">Удалить</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            document.getElementById('cart-total').textContent = total;
+        }
+
+        function removeFromCart(productId) {
+            fetch(`/api/cart/${productId}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка удаления из корзины');
+                return response.json();
+            })
+            .then(() => loadCart())
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось удалить товар из корзины');
+            });
+        }
+
+        // Оформление заказа
+        function checkout() {
+            if (cart.length === 0) return alert('Корзина пуста');
+            showSection('checkout-form');
+        }
+
+        function placeOrder(event) {
+            event.preventDefault();
+            
+            const orderData = {
+                shippingAddress: document.getElementById('shipping-address').value,
+                paymentMethodId: 'pm_card_visa', // В реальном приложении получаем из Stripe Elements
+                cardNumber: document.getElementById('card-number').value,
+                cardExpiry: document.getElementById('card-expiry').value,
+                cardCvc: document.getElementById('card-cvc').value
+            };
+            
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка оформления заказа');
+                return response.json();
+            })
+            .then(order => {
+                alert(`Заказ #${order.id} успешно оформлен!`);
+                cart = [];
+                showOrders();
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось оформить заказ');
+            });
+        }
+
+        // Управление заказами
+        function showOrders() {
+            if (!currentUser) return showLoginForm();
+            
+            fetch('/api/orders', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки заказов');
+                return response.json();
+            })
+            .then(orders => {
+                const container = document.getElementById('orders-list');
+                container.innerHTML = orders.length > 0 
+                    ? orders.map(order => `
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    Заказ #${order.id} - ${new Date(order.createdAt).toLocaleDateString()}
+                                    <span class="badge badge-${order.status === 'completed' ? 'success' : 'warning'} ml-2">
+                                        ${order.status === 'completed' ? 'Завершен' : 'В обработке'}
+                                    </span>
+                                </div>
+                                <small>${order.totalAmount} руб.</small>
+                            </div>
                             <div class="card-body">
-                                <h5 class="card-title">${product.name}</h5>
-                                <p class="card-text">
-                                    <img src="${product.image}" alt="Картинка" style="width: 200px">
-                                    <div class="card-text">
-                                        ${product.price ? `<p><strong>Цена:</strong> ${product.price} руб.</p>` : ''}
-                                        ${product.description ? `<p><strong>Описание:</strong> ${product.description}</p>` : ''}
-                                        ${product.categories && product.categories.length > 0 ? `<p><strong>Категории:</strong> ${product.categories.join(', ')}</p>` : ''}
-                                    </div>
-                                </p>
+                                <h5>Товары:</h5>
+                                <ul class="mb-3">
+                                    ${order.items.map(item => `
+                                        <li>${item.name} - ${item.quantity} × ${item.price} руб.</li>
+                                    `).join('')}
+                                </ul>
+                                <p><strong>Адрес доставки:</strong> ${order.shippingAddress}</p>
                             </div>
                         </div>
-                    `;
-                    productsContainer.appendChild(card);
-                });
-                }
+                    `).join('')
+                    : '<div class="alert alert-info">У вас пока нет заказов</div>';
+                
+                showSection('orders-container');
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось загрузить заказы');
+            });
+        }
 
-            // Показать все данные
-            function showAllData() {
-                loadProducts('id name price description image categories');
-            }
+        // Управление формами авторизации
+        function showLoginForm() {
+            document.getElementById('auth-form-title').textContent = 'Вход';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('auth-forms').style.display = 'flex';
+            document.getElementById('login-email').focus();
+        }
 
-            // Показать только названия и цены
-            function showNamesAndPrices() {
-                loadProducts('id name image price');
-            }
+        function showRegisterForm() {
+            document.getElementById('auth-form-title').textContent = 'Регистрация';
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            document.getElementById('auth-forms').style.display = 'flex';
+            document.getElementById('register-name').focus();
+        }
 
-            // Показать только названия и описания
-            function showNamesAndDescriptions() {
-                loadProducts('id name image description');
-            }
+        function hideAuthForms() {
+            document.getElementById('auth-forms').style.display = 'none';
+            document.getElementById('login-form').reset();
+            document.getElementById('register-form').reset();
+        }
 
-            // Загружаем все данные по умолчанию
+        function login(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Неверный email или пароль');
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('token', data.token);
+                currentUser = data.user;
+                hideAuthForms();
+                updateAuthUI();
+                loadCart();
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert(error.message || 'Ошибка входа');
+            });
+        }
+
+        function register(event) {
+            event.preventDefault();
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка регистрации');
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('token', data.token);
+                currentUser = data.user;
+                hideAuthForms();
+                updateAuthUI();
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert(error.message || 'Ошибка регистрации');
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            currentUser = null;
+            updateAuthUI();
+            cart = [];
             loadProducts();
+        }
 
-            // Подключение к WebSocket-серверу
-            const ws = new WebSocket('ws://localhost:8081');
+        // Вспомогательные функции
+        function showSection(sectionId) {
+            document.querySelectorAll('#main-content > div').forEach(div => {
+                div.style.display = 'none';
+            });
+            document.getElementById(sectionId).style.display = 'block';
+        }
 
-            // Обработка входящих сообщений
-            ws.onmessage = (event) => {
-                // Если данные приходят как Blob, преобразуем их в текст
-                if (event.data instanceof Blob) {
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                        const message = JSON.parse(reader.result); // Парсим JSON
-                        const messagesDiv = document.getElementById('messages');
-                        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
-                    };
-                    reader.readAsText(event.data); // Читаем Blob как текст
-                } else {
-                    // Если данные приходят как текст
-                    const message = JSON.parse(event.data); // Парсим JSON
-                    const messagesDiv = document.getElementById('messages');
-                    messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
-                }
-            };
-
-            // Отправка сообщения
-            function sendMessage() {
-                const input = document.getElementById('messageInput');
-                const message = input.value.trim();
-
-                if (message) {
-                    const messageData = {
-                        sender: 'Покупатель', // Или другое имя пользователя
-                        text: message,
-                    };
-                    ws.send(JSON.stringify(messageData)); // Отправляем сообщение на сервер
-                    input.value = ''; // Очищаем поле ввода
-                }
-            }
-
-            // Обработка закрытия соединения
-            ws.onclose = () => {
-                alert('Соединение с чатом закрыто. Пожалуйста, перезагрузите страницу.');
-            };
-
-            // Обработка ошибок
-            ws.onerror = (error) => {
-                console.error('Ошибка WebSocket:', error);
-            };
-        </script>
-    </body>
+        function showCart() {
+            if (!currentUser) return showLoginForm();
+            loadCart();
+            showSection('cart-container');
+        }
+    </script>
+</body>
 </html>

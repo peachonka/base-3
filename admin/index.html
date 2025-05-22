@@ -3,9 +3,10 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Третье базовое задание</title>
+        <title>Интернет-магазин</title>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
         <link rel="stylesheet" href="styles.css">
+        <link rel="icon" href="icon.png">
     </head>
     <body>
         <h1>Базовое задание №4. Админ панель</h1>
@@ -53,7 +54,7 @@
             <div id="chat" style="margin-top: 20px;  min-width: 350px;">
                 <h2>Чат поддержки</h2>
                 <div id="messages" style="height: 400px; overflow-y: scroll; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;"></div>
-                <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px;">
+                <input type="text" id="messageInput" placeholder="Введите сообщение" style="width: 100%; padding: 5px; border-radius: 5px; border: none; background-color: #00000010;">
                 <button onclick="sendMessage()" class="btn btn-primary" style="width:100%; padding: 5px 10px; margin-top: 10px; border: none; border-radius:5px;">Отправить</button>
             </div>
         </div>
@@ -164,14 +165,14 @@ ws.onmessage = (event) => {
         const reader = new FileReader();
         reader.onload = () => {
             const message = JSON.parse(reader.result); // Парсим JSON
-            messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+            messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: ${message.sender == 'Администратор' ? '#ff00c3' : ""};">${message.sender}:</strong> ${message.text}</div>`;
             messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
         };
         reader.readAsText(event.data); // Читаем Blob как текст
     } else {
         // Если данные приходят как текст
         const message = JSON.parse(event.data); // Парсим JSON
-        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: #ff00c3;">${message.sender}:</strong> ${message.text}</div>`;
+        messagesDiv.innerHTML += `<div style="border-bottom: solid #00000015 1px; padding-bottom: 10px; padding-top: 10px;"><strong style="color: ${message.sender == 'Администратор' ? '#ff00c3' : ""};">${message.sender}:</strong> ${message.text}</div>`;
         messagesDiv.scrollTop = messagesDiv.scrollHeight; // Прокрутка вниз
     }
 };
