@@ -129,6 +129,7 @@
         let currentUser = null;
         let products = [];
         let cart = [];
+        let currentSessionId = null;
 
         // Инициализация при загрузке страницы
         document.addEventListener('DOMContentLoaded', () => {
@@ -138,26 +139,277 @@
 
         // Проверка авторизации
         function checkAuth() {
-            const token = localStorage.getItem('token');
-            if (token) {
+            const sessionId = localStorage.getItem('sessionId');
+            if (sessionId) {
                 fetch('/api/auth/user', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                    headers: { 'Session-Id': sessionId }
                 })
                 .then(response => {
-                    if (!response.ok) throw new Error('Ошибка авторизации');
+                    if (!response.ok) throw new Error('Auth failed');
                     return response.json();
                 })
                 .then(user => {
                     currentUser = user;
+                    currentSessionId = sessionId;
                     updateAuthUI();
                     loadCart();
                 })
                 .catch(() => {
-                    localStorage.removeItem('token');
+                    localStorage.removeItem('sessionId');
                     updateAuthUI();
                 });
             }
         }
+
+        function updateAuthUI() {
+            if (currentUser) {
+                document.getElementById('auth-buttons').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                document.getElementById('username').textContent = currentUser.name;
+            } else {
+                document.getElementById('auth-buttons').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
+            }
+        }
+
+        // Функция регистрации
+        function register(event) {
+            event.preventDefault();
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            
+            fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Registration failed');
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('sessionId', data.sessionId);
+                currentSessionId = data.sessionId;
+                currentUser = data.user;
+                hideAuthForms();
+                updateAuthUI();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Registration error');
+            });
+        }
+
+        // Функция входа
+        function login(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Login failed');
+                return response.json();
+            })
+            .then(data => {
+                localStorage.setItem('sessionId', data.sessionId);
+                currentSessionId = data.sessionId;
+                currentUser = data.user;
+                hideAuthForms();
+                updateAuthUI();
+                loadCart();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert(error.message || 'Login error');
+            });
+        }
+
+        // Функция выхода
+        function logout() {
+            fetch('/api/auth/logout', {
+                method: 'POST',
+                headers: { 'Session-Id': currentSessionId }
+            })
+            .finally(() => {
+                localStorage.removeItem('sessionId');
+                currentSessionId = null;
+                currentUser = null;
+                updateAuthUI();
+                cart = [];
+                loadProducts();
+            });
+        }
+
+        // Пример запроса с аутентификацией
+        function loadCart() {
+            if (!currentUser) return;
+            
+            fetch('/api/cart', {
+                headers: { 'Session-Id': currentSessionId }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Failed to load cart');
+                return response.json();
+            })
+            .then(data => {
+                cart = data;
+                renderCart();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+
+        function removeFromCart(productId) {
+            fetch(`/api/cart/${productId}`, {
+                method: 'DELETE',
+                headers: { 'Session-Id': currentSessionId }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка удаления из корзины');
+                return response.json();
+            })
+            .then(() => loadCart())
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось удалить товар из корзины');
+            });
+        }
+
+        // Оформление заказа
+        function checkout() {
+            if (cart.length === 0) return alert('Корзина пуста');
+            showSection('checkout-form');
+        }
+
+        function placeOrder(event) {
+            event.preventDefault();
+            
+            const orderData = {
+                shippingAddress: document.getElementById('shipping-address').value,
+                paymentMethodId: 'pm_card_visa', // В реальном приложении получаем из Stripe Elements
+                cardNumber: document.getElementById('card-number').value,
+                cardExpiry: document.getElementById('card-expiry').value,
+                cardCvc: document.getElementById('card-cvc').value
+            };
+            
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Session-Id': currentSessionId
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка оформления заказа');
+                return response.json();
+            })
+            .then(order => {
+                alert(`Заказ #${order.id} успешно оформлен!`);
+                cart = [];
+                showOrders();
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось оформить заказ');
+            });
+        }
+
+        // Управление заказами
+        function showOrders() {
+            if (!currentUser) return showLoginForm();
+            
+            fetch('/api/orders', {
+                headers: { 'Session-Id': currentSessionId }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('Ошибка загрузки заказов');
+                return response.json();
+            })
+            .then(orders => {
+                const container = document.getElementById('orders-list');
+                container.innerHTML = orders.length > 0 
+                    ? orders.map(order => `
+                        <div class="card mb-3">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    Заказ #${order.id} - ${new Date(order.createdAt).toLocaleDateString()}
+                                    <span class="badge badge-${order.status === 'completed' ? 'success' : 'warning'} ml-2">
+                                        ${order.status === 'completed' ? 'Завершен' : 'В обработке'}
+                                    </span>
+                                </div>
+                                <small>${order.totalAmount} руб.</small>
+                            </div>
+                            <div class="card-body">
+                                <h5>Товары:</h5>
+                                <ul class="mb-3">
+                                    ${order.items.map(item => `
+                                        <li>${item.name} - ${item.quantity} × ${item.price} руб.</li>
+                                    `).join('')}
+                                </ul>
+                                <p><strong>Адрес доставки:</strong> ${order.shippingAddress}</p>
+                            </div>
+                        </div>
+                    `).join('')
+                    : '<div class="alert alert-info">У вас пока нет заказов</div>';
+                
+                showSection('orders-container');
+            })
+            .catch(error => {
+                console.error('Ошибка:', error);
+                alert('Не удалось загрузить заказы');
+            });
+        }
+
+        // Управление формами авторизации
+        function showLoginForm() {
+            document.getElementById('auth-form-title').textContent = 'Вход';
+            document.getElementById('login-form').style.display = 'block';
+            document.getElementById('register-form').style.display = 'none';
+            document.getElementById('auth-forms').style.display = 'flex';
+            document.getElementById('login-email').focus();
+        }
+
+        function showRegisterForm() {
+            document.getElementById('auth-form-title').textContent = 'Регистрация';
+            document.getElementById('login-form').style.display = 'none';
+            document.getElementById('register-form').style.display = 'block';
+            document.getElementById('auth-forms').style.display = 'flex';
+            document.getElementById('register-name').focus();
+        }
+
+        function hideAuthForms() {
+            document.getElementById('auth-forms').style.display = 'none';
+            document.getElementById('login-form').reset();
+            document.getElementById('register-form').reset();
+        }
+
+        // Вспомогательные функции
+        function showSection(sectionId) {
+            document.querySelectorAll('#main-content > div').forEach(div => {
+                div.style.display = 'none';
+            });
+            document.getElementById(sectionId).style.display = 'block';
+        }
+
+        function showCart() {
+            if (!currentUser) return showLoginForm();
+            loadCart();
+            showSection('cart-container');
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            loadProducts();
+        });
 
         function updateAuthUI() {
             if (currentUser) {
@@ -268,26 +520,6 @@
             });
         }
 
-        function loadCart() {
-            if (!currentUser) return;
-            
-            fetch('/api/cart', {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Ошибка загрузки корзины');
-                return response.json();
-            })
-            .then(data => {
-                cart = data;
-                renderCart();
-            })
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert('Не удалось загрузить корзину');
-            });
-        }
-
         function renderCart() {
             const container = document.getElementById('cart-items');
             let total = 0;
@@ -311,22 +543,6 @@
             }).join('');
             
             document.getElementById('cart-total').textContent = total;
-        }
-
-        function removeFromCart(productId) {
-            fetch(`/api/cart/${productId}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Ошибка удаления из корзины');
-                return response.json();
-            })
-            .then(() => loadCart())
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert('Не удалось удалить товар из корзины');
-            });
         }
 
         // Оформление заказа
@@ -436,68 +652,6 @@
             document.getElementById('auth-forms').style.display = 'none';
             document.getElementById('login-form').reset();
             document.getElementById('register-form').reset();
-        }
-
-        function login(event) {
-            event.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            
-            fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Неверный email или пароль');
-                return response.json();
-            })
-            .then(data => {
-                localStorage.setItem('token', data.token);
-                currentUser = data.user;
-                hideAuthForms();
-                updateAuthUI();
-                loadCart();
-            })
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert(error.message || 'Ошибка входа');
-            });
-        }
-
-        function register(event) {
-            event.preventDefault();
-            const name = document.getElementById('register-name').value;
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            
-            fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Ошибка регистрации');
-                return response.json();
-            })
-            .then(data => {
-                localStorage.setItem('token', data.token);
-                currentUser = data.user;
-                hideAuthForms();
-                updateAuthUI();
-            })
-            .catch(error => {
-                console.error('Ошибка:', error);
-                alert(error.message || 'Ошибка регистрации');
-            });
-        }
-
-        function logout() {
-            localStorage.removeItem('token');
-            currentUser = null;
-            updateAuthUI();
-            cart = [];
-            loadProducts();
         }
 
         // Вспомогательные функции

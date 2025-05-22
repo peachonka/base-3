@@ -1,11 +1,8 @@
-// Основной сервер
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const bodyParser = require('body-parser');
 const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const stripe = require('stripe')('sk_test_your_stripe_key');
 
 const app = express();
 const PORT = 5500;
@@ -14,36 +11,51 @@ app.use(bodyParser.json());
 app.use(express.static('public'));
 
 // Пути к файлам данных
-const goodsFilePath = path.join(__dirname, 'data', 'goods.json');
-const usersFilePath = path.join(__dirname, 'data', 'users.json');
-const ordersFilePath = path.join(__dirname, 'data', 'orders.json');
-const reviewsFilePath = path.join(__dirname, 'data', 'reviews.json');
+const dataDir = path.join(__dirname, 'data');
+const goodsFilePath = path.join(dataDir, 'goods.json');
+const usersFilePath = path.join(dataDir, 'users.json');
+const ordersFilePath = path.join(dataDir, 'orders.json');
+const reviewsFilePath = path.join(dataDir, 'reviews.json');
+
+// Создаем папку data если её нет
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir);
+}
+
+// Инициализация файлов если они не существуют
+[goodsFilePath, usersFilePath, ordersFilePath, reviewsFilePath].forEach(file => {
+    if (!fs.existsSync(file)) {
+        fs.writeFileSync(file, '[]');
+    }
+});
+
+// Простая аутентификация через сессии
+const sessions = {};
 
 // Middleware для проверки аутентификации
-const authenticateToken = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) return res.sendStatus(401);
-
-    jwt.verify(token, 'your_jwt_secret', (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-};
-
-// Middleware для проверки роли администратора
-const isAdmin = (req, res, next) => {
-    if (req.user.role !== 'admin') return res.sendStatus(403);
+const authenticateUser = (req, res, next) => {
+    const sessionId = req.headers['session-id'];
+    if (!sessionId || !sessions[sessionId]) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+    
+    req.user = sessions[sessionId];
     next();
 };
 
 // Регистрация пользователя
 app.post('/api/auth/register', async (req, res) => {
-    const { email, password, name } = req.body;
-    
     try {
-        const users = JSON.parse(fs.readFileSync(usersFilePath));
-        if (users.find(user => user.email === email)) {
+        const { email, password, name } = req.body;
+        
+        if (!email || !password || !name) {
+            return res.status(400).json({ message: 'All fields are required' });
+        }
+
+        console.log(fs.readFile(usersFilePath));
+        const users = JSON.parse(fs.readFile(usersFilePath));
+        
+        if (users.some(user => user.email === email)) {
             return res.status(400).json({ message: 'User already exists' });
         }
 
@@ -60,30 +72,87 @@ app.post('/api/auth/register', async (req, res) => {
         users.push(newUser);
         fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
 
-        const token = jwt.sign({ id: newUser.id, email: newUser.email, role: newUser.role }, 'your_jwt_secret');
-        res.status(201).json({ token });
+        // Создаем сессию
+        const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        sessions[sessionId] = {
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role
+        };
+        
+        res.status(201).json({ 
+            sessionId,
+            user: {
+                id: newUser.id,
+                email: newUser.email,
+                name: newUser.name,
+                role: newUser.role
+            }
+        });
     } catch (err) {
-        res.status(500).json({ message: 'Error registering user' });
+        console.error('Registration error:', err);
+        res.status(500).json({ message: 'Internal server error' });
     }
 });
 
 // Аутентификация пользователя
 app.post('/api/auth/login', async (req, res) => {
-    const { email, password } = req.body;
-    
     try {
+        const { email, password } = req.body;
+        
+        if (!email || !password) {
+            return res.status(400).json({ message: 'Email and password are required' });
+        }
+
         const users = JSON.parse(fs.readFileSync(usersFilePath));
         const user = users.find(user => user.email === email);
         
-        if (!user || !(await bcrypt.compare(password, user.password))) {
+        if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, 'your_jwt_secret');
-        res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(401).json({ message: 'Invalid credentials' });
+        }
+
+        // Создаем сессию
+        const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        sessions[sessionId] = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role
+        };
+        
+        res.json({ 
+            sessionId,
+            user: {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role
+            }
+        });
     } catch (err) {
-        res.status(500).json({ message: 'Error logging in' });
+        console.error('Login error:', err);
+        res.status(500).json({ message: 'Internal server error' });
     }
+});
+
+// Выход пользователя
+app.post('/api/auth/logout', (req, res) => {
+    const sessionId = req.headers['session-id'];
+    if (sessionId && sessions[sessionId]) {
+        delete sessions[sessionId];
+    }
+    res.json({ message: 'Logged out successfully' });
+});
+
+// Получение информации о пользователе
+app.get('/api/auth/user', authenticateUser, (req, res) => {
+    res.json(req.user);
 });
 
 // Получение всех товаров
@@ -95,13 +164,13 @@ app.get('/api/goods', (req, res) => {
 });
 
 // Управление корзиной пользователя
-app.get('/api/cart', authenticateToken, (req, res) => {
+app.get('/api/cart', authenticateUser, (req, res) => {
     const users = JSON.parse(fs.readFileSync(usersFilePath));
     const user = users.find(u => u.id === req.user.id);
     res.json(user.cart);
 });
 
-app.post('/api/cart', authenticateToken, (req, res) => {
+app.post('/api/cart', authenticateUser, (req, res) => {
     const { productId, quantity = 1 } = req.body;
     
     const users = JSON.parse(fs.readFileSync(usersFilePath));
@@ -124,7 +193,7 @@ app.post('/api/cart', authenticateToken, (req, res) => {
     res.json(users[userIndex].cart);
 });
 
-app.delete('/api/cart/:productId', authenticateToken, (req, res) => {
+app.delete('/api/cart/:productId', authenticateUser, (req, res) => {
     const productId = parseInt(req.params.productId);
     
     const users = JSON.parse(fs.readFileSync(usersFilePath));
@@ -139,7 +208,7 @@ app.delete('/api/cart/:productId', authenticateToken, (req, res) => {
 });
 
 // Создание платежа через Stripe
-app.post('/api/create-payment-intent', authenticateToken, async (req, res) => {
+app.post('/api/create-payment-intent', authenticateUser, async (req, res) => {
     const { amount, currency = 'usd' } = req.body;
     
     try {
@@ -155,7 +224,7 @@ app.post('/api/create-payment-intent', authenticateToken, async (req, res) => {
 });
 
 // Создание заказа
-app.post('/api/orders', authenticateToken, async (req, res) => {
+app.post('/api/orders', authenticateUser, async (req, res) => {
     const { paymentMethodId, shippingAddress } = req.body;
     
     try {
@@ -205,7 +274,7 @@ app.post('/api/orders', authenticateToken, async (req, res) => {
 });
 
 // Получение заказов пользователя
-app.get('/api/orders', authenticateToken, (req, res) => {
+app.get('/api/orders', authenticateUser, (req, res) => {
     const orders = JSON.parse(fs.readFileSync(ordersFilePath) || '[]');
     const userOrders = orders.filter(order => order.userId === req.user.id);
     res.json(userOrders);
@@ -221,7 +290,7 @@ app.get('/api/reviews/:productId', (req, res) => {
     res.json(productReviews);
 });
 
-app.post('/api/reviews', authenticateToken, (req, res) => {
+app.post('/api/reviews', authenticateUser, (req, res) => {
     const { productId, rating, comment } = req.body;
     
     if (rating < 1 || rating > 5) {
