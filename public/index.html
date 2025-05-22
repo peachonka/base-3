@@ -124,7 +124,7 @@
             </div>
         </div>
     </div>
-    <script src="https://js.stripe.com/v3/"></script>
+    <!-- <script src="https://js.stripe.com/v3/"></script> -->
     <script>
         let currentUser = null;
         let products = [];
@@ -171,37 +171,37 @@
         }
 
      
-        const stripe = Stripe('pk_test_your_publishable_key_here');
+        // const stripe = Stripe('pk_test_your_publishable_key_here');
         
-        async function checkout() {
-            // 1. Создаем Payment Intent на сервере
-            const response = await fetch('/api/create-payment-intent', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': localStorage.getItem('token')
-            },
-            body: JSON.stringify({ amount: 1000 }) // 10.00 USD
-            });
+        // async function checkout() {
+        //     // 1. Создаем Payment Intent на сервере
+        //     const response = await fetch('/api/create-payment-intent', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Authorization': localStorage.getItem('token')
+        //     },
+        //     body: JSON.stringify({ amount: 1000 }) // 10.00 USD
+        //     });
             
-            const { clientSecret } = await response.json();
+        //     const { clientSecret } = await response.json();
             
-            // 2. Подтверждаем платеж
-            const result = await stripe.confirmCardPayment(clientSecret, {
-            payment_method: {
-                card: elements.getElement('card'),
-                billing_details: {
-                name: 'Customer Name',
-                },
-            }
-            });
+        //     // 2. Подтверждаем платеж
+        //     // const result = await stripe.confirmCardPayment(clientSecret, {
+        //     // payment_method: {
+        //     //     card: elements.getElement('card'),
+        //     //     billing_details: {
+        //     //     name: 'Customer Name',
+        //     //     },
+        //     // }
+        //     // });
             
-            if (result.error) {
-            console.error(result.error.message);
-            } else if (result.paymentIntent.status === 'succeeded') {
-            alert('Платеж успешен!');
-            }
-        }
+        //     if (result.error) {
+        //     console.error(result.error.message);
+        //     } else if (result.paymentIntent.status === 'succeeded') {
+        //     alert('Платеж успешен!');
+        //     }
+        // }
 
         // Загрузка товаров
         function loadProducts() {
