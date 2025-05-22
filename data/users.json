@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "email": "user@example.com",
+    "password": "$2b$10$wbQ2NjbIta8dbZ2R9Z7Pu.0EYMv7fBFLuLI/bauV16jDK71hUbhsy",
+    "name": "Анастасия",
+    "role": "user",
+    "cart": []
+  },
+  {
+    "id": 2,
+    "email": "okneverak@gmail.com",
+    "password": "$2b$10$3XAFNSqZuLSL1iedeJEpL.tcQfkbHWmt6ZPqDi.JXU8QTA9hPPQlW",
+    "name": "Анастасия",
+    "role": "user",
+    "cart": []
+  }
+]

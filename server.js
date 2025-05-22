@@ -22,12 +22,29 @@ if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir);
 }
 
-// Инициализация файлов если они не существуют
-[goodsFilePath, usersFilePath, ordersFilePath, reviewsFilePath].forEach(file => {
-    if (!fs.existsSync(file)) {
-        fs.writeFileSync(file, '[]');
+// Функция для безопасного чтения JSON файлов
+function readJsonFile(filePath) {
+    try {
+        if (!fs.existsSync(filePath)) {
+            fs.writeFileSync(filePath, '[]');
+            return [];
+        }
+        const content = fs.readFileSync(filePath, 'utf8');
+        return content ? JSON.parse(content) : [];
+    } catch (err) {
+        console.error(`Error reading file ${filePath}:`, err);
+        return [];
     }
-});
+}
+
+// Функция для записи в JSON файл
+function writeJsonFile(filePath, data) {
+    try {
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    } catch (err) {
+        console.error(`Error writing to file ${filePath}:`, err);
+    }
+}
 
 // Простая аутентификация через сессии
 const sessions = {};
@@ -52,8 +69,7 @@ app.post('/api/auth/register', async (req, res) => {
             return res.status(400).json({ message: 'All fields are required' });
         }
 
-        console.log(fs.readFile(usersFilePath));
-        const users = JSON.parse(fs.readFile(usersFilePath));
+        const users = readJsonFile(usersFilePath);
         
         if (users.some(user => user.email === email)) {
             return res.status(400).json({ message: 'User already exists' });
@@ -61,7 +77,7 @@ app.post('/api/auth/register', async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newUser = {
-            id: users.length + 1,
+            id: users.length > 0 ? Math.max(...users.map(u => u.id)) + 1 : 1,
             email,
             password: hashedPassword,
             name,
@@ -70,7 +86,7 @@ app.post('/api/auth/register', async (req, res) => {
         };
 
         users.push(newUser);
-        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+        writeJsonFile(usersFilePath, users);
 
         // Создаем сессию
         const sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
@@ -105,7 +121,7 @@ app.post('/api/auth/login', async (req, res) => {
             return res.status(400).json({ message: 'Email and password are required' });
         }
 
-        const users = JSON.parse(fs.readFileSync(usersFilePath));
+        const users = readJsonFile(usersFilePath);
         const user = users.find(user => user.email === email);
         
         if (!user) {
